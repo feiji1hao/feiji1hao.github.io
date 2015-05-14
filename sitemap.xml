@@ -9,9 +9,20 @@
     <lastmod>2015-05-14T11:00:24+08:00</lastmod>
   </url>
   <url>
+    <loc>http://feiji1hao.github.io/blog/2014/11/03/kubernetes-services/</loc>
+    <lastmod>2014-11-03T00:00:00+08:00</lastmod>
+  </url>
+  <url>
+    <loc>http://feiji1hao.github.io/blog/2014/10/31/veth/</loc>
+    <lastmod>2014-10-31T00:00:00+08:00</lastmod>
+  </url>
+  <url>
     <loc>http://feiji1hao.github.io/blog/archives/</loc>
   </url>
   <url>
     <loc>http://feiji1hao.github.io/</loc>
+  </url>
+  <url>
+    <loc>http://feiji1hao.github.io/blog/categories/linux/</loc>
   </url>
 </urlset>

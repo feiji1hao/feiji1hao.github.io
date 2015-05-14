@@ -4,7 +4,7 @@
   <title><![CDATA[赵成辉的博客]]></title>
   <link href="http://feiji1hao.github.io/atom.xml" rel="self"/>
   <link href="http://feiji1hao.github.io/"/>
-  <updated>2015-05-14T12:08:15+08:00</updated>
+  <updated>2015-05-14T13:03:58+08:00</updated>
   <id>http://feiji1hao.github.io/</id>
   <author>
     <name><![CDATA[赵成辉]]></name>
@@ -229,6 +229,356 @@ categories: &ldquo;&rdquo;</p>
     <updated>2015-05-14T11:00:24+08:00</updated>
     <id>http://feiji1hao.github.io/blog/2015/05/14/hello-octopress</id>
     <content type="html"><![CDATA[
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Kubernetes解析：services]]></title>
+    <link href="http://feiji1hao.github.io/blog/2014/11/03/kubernetes-services/"/>
+    <updated>2014-11-03T00:00:00+08:00</updated>
+    <id>http://feiji1hao.github.io/blog/2014/11/03/kubernetes-services</id>
+    <content type="html"><![CDATA[<p>Kubernetes从0.4开始，开发很快，变化也很大。这里谈谈services的一些变化。
+之前的kubernetes services，kube-proxy在host上监听service指定的端口，然后由kube-proxy将请求转到后端具体的pods。这有一些问题：</p>
+
+<p>（1）最大的问题，由于kube-proxy在host上监听端口，这样pod内的容器在expose时，就不能使用该host的该端口；而且service之间可能冲突；</p>
+
+<p>（2）环境变量不能动态更新，所以pods不能知道在它之后启动的service的信息。</p>
+
+<p>为此，kubernetes重新设计了services，让每个service都有一个自己的IP，但这并不是一个真正IP，而是通过iptables实现一个虚拟的IP。每个节点都生成这样一条类似的iptables规则：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>-A KUBE-PROXY -d <span class="k">${</span><span class="nv">service</span><span class="p">-ip</span><span class="k">}</span>/32 -p tcp -m comment --comment apache-service -m tcp --dport <span class="k">${</span><span class="nv">service</span><span class="p">-port</span><span class="k">}</span> -j REDIRECT --to-ports <span class="k">${</span><span class="nv">kube</span><span class="p">-proxy-port</span><span class="k">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>由于kube-proxy-port是随机生成，大大减少了host port冲突的机会。另外，由于每个service都有一个自己的IP，所以service之间冲突也没有了，不同的service可以使用相同的port。</p>
+
+<p>考虑3个节点：</p>
+
+<p>yy1: 172.16.213.138 (master)</p>
+
+<p>yy2: 172.16.213.140 (minion)</p>
+
+<p>yy3: 172.16.213.141 (minion)</p>
+
+<p>apiserver运行参数</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>＃kube-apiserver --logtostderr<span class="o">=</span><span class="nb">true</span> --v<span class="o">=</span><span class="m">0</span> --etcd_servers<span class="o">=</span>http://172.16.213.138:4001 --address<span class="o">=</span>0.0.0.0 --port<span class="o">=</span><span class="m">8080</span> --machines<span class="o">=</span>172.16.213.140,172.16.213.141 --minion_port<span class="o">=</span><span class="m">10250</span> --allow_privileged<span class="o">=</span><span class="nb">true</span> --portal_net<span class="o">=</span>10.11.0.0/16
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>定义services</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>cat apache-service.json
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="s2">&quot;id&quot;</span>: <span class="s2">&quot;apache-service&quot;</span>,
+</span><span class='line'>  <span class="s2">&quot;kind&quot;</span>: <span class="s2">&quot;Service&quot;</span>,
+</span><span class='line'>  <span class="s2">&quot;apiVersion&quot;</span>: <span class="s2">&quot;v1beta1&quot;</span>,
+</span><span class='line'>  <span class="s2">&quot;port&quot;</span>: 12345,
+</span><span class='line'>  <span class="s2">&quot;containerPort&quot;</span>: 80,
+</span><span class='line'>  <span class="s2">&quot;selector&quot;</span>: <span class="o">{</span>
+</span><span class='line'>    <span class="s2">&quot;name&quot;</span>: <span class="s2">&quot;apache&quot;</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>port为services的端口，kubernetes会为该service选择一个portal_net子网内的一个IP。
+如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>kubecfg -c apache-service.json create services
+</span><span class='line'>ID                  Labels              Selector            IP                  Port
+</span><span class='line'>----------          ----------          ----------          ----------          ----------
+</span><span class='line'>apache-service                          <span class="nv">name</span><span class="o">=</span>apache         10.11.0.1           12345
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以看看yy2，yy3上iptables的变化。</p>
+
+<p>yy2</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="o">[</span>yy@yy2 ~<span class="o">]</span><span class="nv">$ </span>sudo iptables -nvL -t nat
+</span><span class='line'>Chain KUBE-PROXY <span class="o">(</span><span class="m">2</span> references<span class="o">)</span>
+</span><span class='line'> pkts bytes target     prot opt in     out     <span class="nb">source               </span>destination
+</span><span class='line'>    <span class="m">1</span>    <span class="m">60</span> REDIRECT   tcp  --  *      *       0.0.0.0/0            10.11.0.1            /* apache-service */ tcp dpt:12345 redir ports 33945
+</span><span class='line'>
+</span><span class='line'><span class="o">[</span>yy@yy2 ~<span class="o">]</span><span class="nv">$ </span>sudo netstat -ltnp<span class="p">|</span>grep 33945
+</span><span class='line'>tcp6       <span class="m">0</span>      <span class="m">0</span> :::33945                :::*                    LISTEN      247/kube-proxy
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>yy3</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="o">[</span>yy@yy3 ~<span class="o">]</span><span class="nv">$ </span>sudo iptables -nvL -t nat
+</span><span class='line'>Chain KUBE-PROXY <span class="o">(</span><span class="m">2</span> references<span class="o">)</span>
+</span><span class='line'> pkts bytes target     prot opt in     out     <span class="nb">source               </span>destination
+</span><span class='line'><span class="m">0</span>     <span class="m">0</span> REDIRECT   tcp  --  *      *       0.0.0.0/0            10.11.0.1            /* apache-service */ tcp dpt:12345 redir ports 47163
+</span><span class='line'>
+</span><span class='line'><span class="o">[</span>yy@yy3 ~<span class="o">]</span><span class="nv">$ </span>sudo netstat -ltnp<span class="p">|</span>grep 47163
+</span><span class='line'>tcp6       <span class="m">0</span>      <span class="m">0</span> :::47163                :::*                    LISTEN      255/kube-proxy
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>整体结构大致如下：
+<img src="http://feiji1hao.github.io/assets/2014-11-03-kubernetes-services.png" alt="" /></p>
+
+<p>更多内容请参考
+<a href="https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/services.md">https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/services.md</a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[从veth看虚拟网络设备的qdisc]]></title>
+    <link href="http://feiji1hao.github.io/blog/2014/10/31/veth/"/>
+    <updated>2014-10-31T00:00:00+08:00</updated>
+    <id>http://feiji1hao.github.io/blog/2014/10/31/veth</id>
+    <content type="html"><![CDATA[<h2>背景</h2>
+
+<p>前段时间在测试docker的网络性能的时候，发现了一个veth的性能问题，后来给docker官方提交了一个PR，参考<a href="https://github.com/docker/libcontainer/pull/193">set tx_queuelen to 0 when create veth device</a>，引起了一些讨论。再后来，RedHat的网络专家<a href="https://github.com/netoptimizer">Jesper Brouer</a> 出来详细的讨论了一下这个问题。</p>
+
+<p><img src="http://images.cnitblog.com/blog/23202/201410/141941365298477.png" alt="veth qdisc" /></p>
+
+<p>可以看到，veth设备qdisc队列，而环回设备/桥接设备是没qdisc队列的，参考br_dev_setup函数。</p>
+
+<h2>内核实现</h2>
+
+<p>在注册（创建）设备时，qdisc设置为noop_qdisc，
+register_netdevice -> dev_init_scheduler</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="nf">dev_init_scheduler</span><span class="p">(</span><span class="k">struct</span> <span class="n">net_device</span> <span class="o">*</span><span class="n">dev</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="n">dev</span><span class="o">-&gt;</span><span class="n">qdisc</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">noop_qdisc</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">netdev_for_each_tx_queue</span><span class="p">(</span><span class="n">dev</span><span class="p">,</span> <span class="n">dev_init_scheduler_queue</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">noop_qdisc</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">dev_init_scheduler_queue</span><span class="p">(</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">rx_queue</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">noop_qdisc</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">setup_timer</span><span class="p">(</span><span class="o">&amp;</span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">watchdog_timer</span><span class="p">,</span> <span class="n">dev_watchdog</span><span class="p">,</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)</span><span class="n">dev</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>打开设备时，如果没有配置qdisc时，就指定为默认的pfifo_fast队列：
+dev_open -> dev_activate，</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="nf">dev_activate</span><span class="p">(</span><span class="k">struct</span> <span class="n">net_device</span> <span class="o">*</span><span class="n">dev</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">need_watchdog</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/* No queueing discipline is attached to device;</span>
+</span><span class='line'><span class="cm">    create default one i.e. pfifo_fast for devices,</span>
+</span><span class='line'><span class="cm">    which need queueing and noqueue_qdisc for</span>
+</span><span class='line'><span class="cm">    virtual interfaces</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">qdisc</span> <span class="o">==</span> <span class="o">&amp;</span><span class="n">noop_qdisc</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">attach_default_qdiscs</span><span class="p">(</span><span class="n">dev</span><span class="p">);</span>
+</span><span class='line'><span class="p">...</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">static</span> <span class="kt">void</span> <span class="nf">attach_default_qdiscs</span><span class="p">(</span><span class="k">struct</span> <span class="n">net_device</span> <span class="o">*</span><span class="n">dev</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="k">struct</span> <span class="n">netdev_queue</span> <span class="o">*</span><span class="n">txq</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">struct</span> <span class="n">Qdisc</span> <span class="o">*</span><span class="n">qdisc</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">txq</span> <span class="o">=</span> <span class="n">netdev_get_tx_queue</span><span class="p">(</span><span class="n">dev</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">netif_is_multiqueue</span><span class="p">(</span><span class="n">dev</span><span class="p">)</span> <span class="o">||</span> <span class="n">dev</span><span class="o">-&gt;</span><span class="n">tx_queue_len</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>      <span class="n">netdev_for_each_tx_queue</span><span class="p">(</span><span class="n">dev</span><span class="p">,</span> <span class="n">attach_one_default_qdisc</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+</span><span class='line'>      <span class="n">dev</span><span class="o">-&gt;</span><span class="n">qdisc</span> <span class="o">=</span> <span class="n">txq</span><span class="o">-&gt;</span><span class="n">qdisc_sleeping</span><span class="p">;</span>
+</span><span class='line'>      <span class="n">atomic_inc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">qdisc</span><span class="o">-&gt;</span><span class="n">refcnt</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span><span class="c1">///multi queue</span>
+</span><span class='line'>      <span class="n">qdisc</span> <span class="o">=</span> <span class="n">qdisc_create_dflt</span><span class="p">(</span><span class="n">dev</span><span class="p">,</span> <span class="n">txq</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">mq_qdisc_ops</span><span class="p">,</span> <span class="n">TC_H_ROOT</span><span class="p">);</span>
+</span><span class='line'>      <span class="k">if</span> <span class="p">(</span><span class="n">qdisc</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>          <span class="n">qdisc</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">attach</span><span class="p">(</span><span class="n">qdisc</span><span class="p">);</span>
+</span><span class='line'>          <span class="n">dev</span><span class="o">-&gt;</span><span class="n">qdisc</span> <span class="o">=</span> <span class="n">qdisc</span><span class="p">;</span>
+</span><span class='line'>      <span class="p">}</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">static</span> <span class="kt">void</span> <span class="nf">attach_one_default_qdisc</span><span class="p">(</span><span class="k">struct</span> <span class="n">net_device</span> <span class="o">*</span><span class="n">dev</span><span class="p">,</span>
+</span><span class='line'>                   <span class="k">struct</span> <span class="n">netdev_queue</span> <span class="o">*</span><span class="n">dev_queue</span><span class="p">,</span>
+</span><span class='line'>                   <span class="kt">void</span> <span class="o">*</span><span class="n">_unused</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="k">struct</span> <span class="n">Qdisc</span> <span class="o">*</span><span class="n">qdisc</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">tx_queue_len</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>      <span class="n">qdisc</span> <span class="o">=</span> <span class="n">qdisc_create_dflt</span><span class="p">(</span><span class="n">dev</span><span class="p">,</span> <span class="n">dev_queue</span><span class="p">,</span>
+</span><span class='line'>                    <span class="o">&amp;</span><span class="n">pfifo_fast_ops</span><span class="p">,</span> <span class="n">TC_H_ROOT</span><span class="p">);</span>
+</span><span class='line'>      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">qdisc</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>          <span class="n">printk</span><span class="p">(</span><span class="n">KERN_INFO</span> <span class="s">&quot;%s: activation failed</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">dev</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span>
+</span><span class='line'>          <span class="k">return</span><span class="p">;</span>
+</span><span class='line'>      <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="cm">/* Can by-pass the queue discipline for default qdisc */</span>
+</span><span class='line'>      <span class="n">qdisc</span><span class="o">-&gt;</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">TCQ_F_CAN_BYPASS</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>      <span class="n">qdisc</span> <span class="o">=</span>  <span class="o">&amp;</span><span class="n">noqueue_qdisc</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>  <span class="n">dev_queue</span><span class="o">-&gt;</span><span class="n">qdisc_sleeping</span> <span class="o">=</span> <span class="n">qdisc</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>创建noqueue</h2>
+
+<p>开始尝试直接删除设备默认的pfifo_fast队列，发现会出错：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c"># tc qdisc del dev vethd4ea root</span>
+</span><span class='line'>RTNETLINK answers: No such file or directory
+</span><span class='line'><span class="c"># tc  -s qdisc ls dev vethd4ea</span>
+</span><span class='line'>qdisc pfifo_fast 0: root refcnt <span class="m">2</span> bands <span class="m">3</span> priomap  <span class="m">1</span> <span class="m">2</span> <span class="m">2</span> <span class="m">2</span> <span class="m">1</span> <span class="m">2</span> <span class="m">0</span> <span class="m">0</span> <span class="m">1</span> <span class="m">1</span> <span class="m">1</span> <span class="m">1</span> <span class="m">1</span> <span class="m">1</span> <span class="m">1</span> 1
+</span><span class='line'> Sent <span class="m">29705382</span> bytes <span class="m">441562</span> pkt <span class="o">(</span>dropped 0, overlimits <span class="m">0</span> requeues 0<span class="o">)</span>
+</span><span class='line'> backlog 0b 0p requeues <span class="m">0</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>后来看到Jesper Brouer给出一个替换默认队列的方式，尝试了一下，成功完成。</p>
+
+<p>替换默认的qdisc队列</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c"># tc qdisc replace dev vethd4ea root pfifo limit 100</span>
+</span><span class='line'><span class="c"># tc  -s qdisc ls dev vethd4ea                      </span>
+</span><span class='line'>qdisc pfifo 8001: root refcnt <span class="m">2</span> limit 100p
+</span><span class='line'> Sent <span class="m">264</span> bytes <span class="m">4</span> pkt <span class="o">(</span>dropped 0, overlimits <span class="m">0</span> requeues 0<span class="o">)</span>
+</span><span class='line'> backlog 0b 0p requeues <span class="m">0</span>
+</span><span class='line'><span class="c"># ip link show vethd4ea</span>
+</span><span class='line'>9: vethd4ea: &lt;BROADCAST,UP,LOWER_UP&gt; mtu <span class="m">1500</span> qdisc pfifo master docker0 state UP mode DEFAULT qlen 1000
+</span><span class='line'>link/ether 3a:15:3b:e1:d7:6d brd ff:ff:ff:ff:ff:ff
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>修改队列长度</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c"># ifconfig vethd4ea txqueuelen 0</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>删除qdisc</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c"># tc qdisc del dev vethd4ea root                    </span>
+</span><span class='line'><span class="c"># ip link show vethd4ea                </span>
+</span><span class='line'>9: vethd4ea: &lt;BROADCAST,UP,LOWER_UP&gt; mtu <span class="m">1500</span> qdisc noqueue master docker0 state UP mode DEFAULT
+</span><span class='line'>link/ether 3a:15:3b:e1:d7:6d brd ff:ff:ff:ff:ff:ff
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以看到，UP的veth设备成功修改成noqueue。</p>
+
+<h2>小结</h2>
+
+<p>总之，给虚拟网络设备创建默认的qdisc，是不太合理的。这会让虚拟机（或者容器）的网络瓶颈过早的出现在qdisc，而不是真实的物理设备（除非应用需要创建qdisc）。更多详细参考<a href="https://bugzilla.redhat.com/show_bug.cgi?id=1152231">这里</a>。</p>
 ]]></content>
   </entry>
   
