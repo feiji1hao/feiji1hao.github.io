@@ -4,7 +4,7 @@
   <title><![CDATA[赵成辉的博客]]></title>
   <link href="http://feiji1hao.github.io/atom.xml" rel="self"/>
   <link href="http://feiji1hao.github.io/"/>
-  <updated>2015-05-14T10:44:00+08:00</updated>
+  <updated>2015-05-14T10:56:29+08:00</updated>
   <id>http://feiji1hao.github.io/</id>
   <author>
     <name><![CDATA[赵成辉]]></name>
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Hello Octopress]]></title>
-    <link href="http://feiji1hao.github.io/blog/2014/05/14/hello-octopress/"/>
+    <link href="http://feiji1hao.github.io/blog/hello-octopress.html/"/>
     <updated>2014-05-14T10:39:57+08:00</updated>
-    <id>http://feiji1hao.github.io/blog/2014/05/14/hello-octopress</id>
+    <id>http://feiji1hao.github.io/blog/hello-octopress</id>
     <content type="html"><![CDATA[
 ]]></content>
   </entry>
