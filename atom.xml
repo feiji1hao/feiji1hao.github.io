@@ -4,7 +4,7 @@
   <title><![CDATA[赵成辉的博客]]></title>
   <link href="http://feiji1hao.github.io/atom.xml" rel="self"/>
   <link href="http://feiji1hao.github.io/"/>
-  <updated>2015-05-14T18:35:13+08:00</updated>
+  <updated>2015-05-14T18:37:21+08:00</updated>
   <id>http://feiji1hao.github.io/</id>
   <author>
     <name><![CDATA[赵成辉]]></name>
@@ -15,23 +15,10 @@
   
   <entry>
     <title type="html"><![CDATA[Hello Octopress]]></title>
-    <link href="http://feiji1hao.github.io/blog/2015/05/14/hello-octopress/"/>
-    <updated>2015-05-14T11:00:24+08:00</updated>
-    <id>http://feiji1hao.github.io/blog/2015/05/14/hello-octopress</id>
-    <content type="html"><![CDATA[
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ios应用架构谈 View层的组织和调用方案]]></title>
     <link href="http://feiji1hao.github.io/blog/2015/05/14/iOS%E5%BA%94%E7%94%A8%E6%9E%B6%E6%9E%84%E8%B0%88%20view%E5%B1%82%E7%9A%84%E7%BB%84%E7%BB%87%E5%92%8C%E8%B0%83%E7%94%A8%E6%96%B9%E6%A1%88/"/>
-    <updated>2015-05-14T00:00:00+08:00</updated>
+    <updated>2015-05-14T12:00:24+08:00</updated>
     <id>http://feiji1hao.github.io/blog/2015/05/14/iOS应用架构谈 view层的组织和调用方案</id>
-    <content type="html"><![CDATA[<h1>iOS应用架构谈 view层的组织和调用方案</h1>
-
-<p>-</p>
-
-<p><em>该文档来转自<a href="http://casatwy.com/iosying-yong-jia-gou-tan-viewceng-de-zu-zhi-he-diao-yong-fang-an.html">http://casatwy.com</a></em></p>
+    <content type="html"><![CDATA[<p><em>该文档来转自<a href="http://casatwy.com/iosying-yong-jia-gou-tan-viewceng-de-zu-zhi-he-diao-yong-fang-an.html">http://casatwy.com</a></em></p>
 
 <blockquote><p><a href="http://casatwy.com/iosying-yong-jia-gou-tan-kai-pian.html">iOS应用架构谈 开篇</a><br/>
 <a href="http://casatwy.com/iosying-yong-jia-gou-tan-viewceng-de-zu-zhi-he-diao-yong-fang-an.html">iOS应用架构谈 view层的组织和调用方案.</a><br/>
@@ -1055,6 +1042,15 @@ Controller ------------------&gt; MessageSender
 <p>勘误2：MVVM要有ViewModel，以及ReactiveCocoa带来的信号通知效果，在ReactiveCocoa里就是RAC等相关宏来实现。另外，使用ReactiveCocoa能够比较优雅地实现MVVM模式，就是因为有RAC等相关宏的存在。就像它的名字一样Reactive-响应式，这也是区分MVVM的VM和MVC的C和MVP的P的一个重要方面。</p>
 
 <p>本文遵守CC-BY。 请保持转载后文章内容的完整，以及文章出处。本人保留所有版权相关权利。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Hello Octopress]]></title>
+    <link href="http://feiji1hao.github.io/blog/2015/05/14/hello-octopress/"/>
+    <updated>2015-05-14T11:00:24+08:00</updated>
+    <id>http://feiji1hao.github.io/blog/2015/05/14/hello-octopress</id>
+    <content type="html"><![CDATA[
 ]]></content>
   </entry>
   
