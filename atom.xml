@@ -4,7 +4,7 @@
   <title><![CDATA[赵成辉的博客]]></title>
   <link href="http://feiji1hao.github.io/atom.xml" rel="self"/>
   <link href="http://feiji1hao.github.io/"/>
-  <updated>2015-05-14T18:37:21+08:00</updated>
+  <updated>2015-05-14T20:53:42+08:00</updated>
   <id>http://feiji1hao.github.io/</id>
   <author>
     <name><![CDATA[赵成辉]]></name>
@@ -12,6 +12,44 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Hello Octopress]]></title>
+    <link href="http://feiji1hao.github.io/blog/2015/05/14/iOS%E5%A4%9A%E7%BA%BF%E7%A8%8B%E4%B8%8E%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/"/>
+    <updated>2015-05-14T20:00:24+08:00</updated>
+    <id>http://feiji1hao.github.io/blog/2015/05/14/iOS多线程与内存管理</id>
+    <content type="html"><![CDATA[<h1>iOS多线程与内存管理</h1>
+
+<p>&ndash;
+Object-C高级编程 iOS与OS X线程与内存管理</p>
+
+<h2>第1章：自动引用计数</h2>
+
+<h3>1.1 什么是自动引用计数</h3>
+
+<h3>1.2 内存管理/引用计数</h3>
+
+<h3>1.3 ARC规则</h3>
+
+<h3>1.4 ARC的实现</h3>
+
+<h2>第2章：Blocks</h2>
+
+<h3>2.1 Blocks概要</h3>
+
+<h3>2.2 Blocks模式</h3>
+
+<h3>2.3 Blocks实现</h3>
+
+<h2>第3章：Grand Central Dispatch</h2>
+
+<h3>3.1 Grand Central Dispatch(GCD)概要</h3>
+
+<h3>3.2 GCD的API</h3>
+
+<h3>3.3 GCD实现</h3>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Hello Octopress]]></title>
